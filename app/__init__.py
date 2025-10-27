@@ -1,10 +1,10 @@
-# app/__init__.py
 from flask import Flask
-from .config import Config
-from .extensions import mongo
-from .routes.jwt_routes import bp as jwt_bp
 from flask_cors import CORS
 import traceback
+
+from app.config import Config
+from app.extensions import mongo
+from app.routes.jwt_routes import bp as jwt_bp
 
 def create_app(config_object=Config):
     app = Flask(__name__)

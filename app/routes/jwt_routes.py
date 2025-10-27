@@ -1,8 +1,10 @@
 from flask import Blueprint, request, jsonify, current_app
-from ..services.jwt_service import JWTService
-from ..model.test_case_model import TestCase
-from ..extensions import mongo
 from bson import ObjectId
+from bson.errors import InvalidId
+
+from app.services.jwt_service import JWTService
+from app.model.test_case_model import TestCase
+from app.extensions import mongo
 
 bp = Blueprint('jwt', __name__, url_prefix='/api/jwt')
 
@@ -78,5 +80,8 @@ def list_tests():
 @bp.route('/tests/<test_id>', methods=['DELETE'])
 def delete_test(test_id):
     collection = mongo.db.test_cases
-    res = collection.delete_one({"_id": ObjectId(test_id)})
+    try:
+        res = collection.delete_one({"_id": ObjectId(test_id)})
+    except InvalidId:
+        return jsonify({"error": "Invalid test_id"}), 400
     return jsonify({"deleted_count": res.deleted_count})
