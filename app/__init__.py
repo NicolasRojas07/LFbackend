@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_cors import CORS
 import traceback
@@ -9,6 +10,8 @@ from app.routes.jwt_routes import bp as jwt_bp
 def create_app(config_object=Config):
     app = Flask(__name__)
     app.config.from_object(config_object)
+
+    app.config["MONGO_URI"] = os.environ.get("MONGO_URI", app.config.get("MONGO_URI"))
 
     mongo.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
