@@ -20,28 +20,32 @@ def create_app(config_object=Config):
         # Fail fast with a clear message if MONGO_URI is missing
         raise RuntimeError("MONGO_URI is not set. Configure it via environment variables.")
 
-    # Initialize direct PyMongo client - let URI parameters handle TLS config
+    # Initialize direct PyMongo client - MongoDB optional for basic JWT operations
     uri = app.config.get("MONGO_URI", "")
-    if not uri:
-        raise RuntimeError("MONGO_URI is not set. Configure it via environment variables.")
     
-    try:
-        extensions.client = MongoClient(
-            uri,
-            serverSelectionTimeoutMS=10000,
-            connectTimeoutMS=10000,
-            socketTimeoutMS=10000
-        )
-        extensions.db = extensions.client.get_database()
-        
-        # Test connection
-        extensions.db.command('ping')
-        print("✓ MongoDB connection successful")
-    except Exception as e:
-        print(f"✗ MongoDB connection FAILED: {type(e).__name__}: {e}")
-        print("  → Check Atlas Network Access IP allowlist")
-        print("  → Verify database user permissions")
-        print("  → Ensure MONGO_URI includes tlsAllowInvalidCertificates=true for Render")
+    if uri:
+        try:
+            extensions.client = MongoClient(
+                uri,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=5000,
+                socketTimeoutMS=5000
+            )
+            extensions.db = extensions.client.get_database()
+            
+            # Test connection
+            extensions.db.command('ping')
+            print("✓ MongoDB connection successful")
+        except Exception as e:
+            print(f"⚠ MongoDB connection FAILED: {type(e).__name__}: {str(e)[:100]}")
+            print("  → MongoDB endpoints (/api/jwt/tests, /save-test) will return 503")
+            print("  → Other JWT endpoints continue to work normally")
+            extensions.db = None
+            extensions.client = None
+    else:
+        print("⚠ MONGO_URI not set - MongoDB endpoints disabled")
+        extensions.db = None
+        extensions.client = None
 
     app.register_blueprint(jwt_bp)
 
