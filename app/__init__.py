@@ -21,6 +21,11 @@ def create_app(config_object=Config):
     CORS(app, resources={r"/api/*": {"origins": "*"}})
     app.register_blueprint(jwt_bp)
 
+    @app.route("/")
+    def index():
+        return {"message": "Backend is running! Go to /health enpoint."}, 200
+
+
     @app.route("/health")
     def health():
         return {"status": "ok"}, 200
