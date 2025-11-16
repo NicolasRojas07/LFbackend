@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 import traceback
 from app.config import Config
 from app.routes.jwt_routes import bp as jwt_bp
@@ -15,6 +16,27 @@ def create_app(config_object=Config):
     if not app.config.get("MONGO_URI"):
         # Fail fast with a clear message if MONGO_URI is missing
         raise RuntimeError("MONGO_URI is not set. Configure it via environment variables.")
+
+    # If using MongoDB Atlas SRV, disable OCSP endpoint check unless already set in the URI
+    uri = app.config.get("MONGO_URI", "")
+    try:
+        parsed = urlparse(uri)
+        if parsed.scheme == "mongodb+srv" and parsed.hostname and parsed.hostname.endswith("mongodb.net"):
+            qs = dict(parse_qsl(parsed.query, keep_blank_values=True))
+            if "tlsDisableOCSPEndpointCheck" not in qs:
+                qs["tlsDisableOCSPEndpointCheck"] = "true"
+                new_query = urlencode(qs)
+                app.config["MONGO_URI"] = urlunparse((
+                    parsed.scheme,
+                    parsed.netloc,
+                    parsed.path,
+                    parsed.params,
+                    new_query,
+                    parsed.fragment,
+                ))
+    except Exception:
+        pass
+
     mongo.init_app(app)
 
     app.register_blueprint(jwt_bp)
