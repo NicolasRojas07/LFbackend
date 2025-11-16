@@ -43,10 +43,15 @@ def verify():
 @bp.route('/encode', methods=['POST'])
 def encode():
     data = request.get_json() or {}
+
     header = data.get("header", {})
     payload = data.get("payload", {})
-    secret = data.get("secret", current_app.config.get("APP_SECRET"))
+    secret = data.get("secret")
     algorithm = data.get("algorithm", "HS256")
+
+    if not secret:
+        return jsonify({"error": "Missing 'secret'"}), 400
+
     try:
         token = JWTService.create_token(header, payload, secret, algorithm)
         return jsonify({"token": token})
