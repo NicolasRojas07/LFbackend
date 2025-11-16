@@ -20,16 +20,17 @@ def create_app(config_object=Config):
         # Fail fast with a clear message if MONGO_URI is missing
         raise RuntimeError("MONGO_URI is not set. Configure it via environment variables.")
 
-    # Initialize direct PyMongo client with tlsInsecure to bypass TLS certificate validation
+    # Initialize direct PyMongo client - let URI parameters handle TLS config
     uri = app.config.get("MONGO_URI", "")
+    if not uri:
+        raise RuntimeError("MONGO_URI is not set. Configure it via environment variables.")
+    
     try:
         extensions.client = MongoClient(
             uri,
-            tlsInsecure=True,
-            tlsCAFile=certifi.where(),
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=5000,
-            socketTimeoutMS=5000
+            serverSelectionTimeoutMS=10000,
+            connectTimeoutMS=10000,
+            socketTimeoutMS=10000
         )
         extensions.db = extensions.client.get_database()
         
@@ -40,6 +41,7 @@ def create_app(config_object=Config):
         print(f"✗ MongoDB connection FAILED: {type(e).__name__}: {e}")
         print("  → Check Atlas Network Access IP allowlist")
         print("  → Verify database user permissions")
+        print("  → Ensure MONGO_URI includes tlsAllowInvalidCertificates=true for Render")
 
     app.register_blueprint(jwt_bp)
 
