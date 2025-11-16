@@ -26,9 +26,36 @@ def create_app(config_object=Config):
         raise RuntimeError("MONGO_URI is not set. Configure it via environment variables.")
     
     try:
-        # If using mongodb+srv and getting TLS errors, try converting to direct connection
+        # Convert mongodb+srv:// to direct mongodb:// to bypass TLS handshake issues
         if uri.startswith("mongodb+srv://"):
-            print("⚠ Using mongodb+srv - may have TLS issues on some platforms")
+            print(">>> Converting mongodb+srv:// to direct connection...")
+            
+            # Parse the SRV URI
+            parsed = urlparse(uri)
+            
+            # Extract credentials
+            username = parsed.username
+            password = parsed.password
+            hostname = parsed.hostname  # e.g., jwtcluster.fm231vs.mongodb.net
+            database = parsed.path.lstrip('/')
+            
+            # Known shard hosts from error logs
+            shard_hosts = [
+                "ac-ydgxmui-shard-00-00.fm231vs.mongodb.net:27017",
+                "ac-ydgxmui-shard-00-01.fm231vs.mongodb.net:27017",
+                "ac-ydgxmui-shard-00-02.fm231vs.mongodb.net:27017"
+            ]
+            
+            # Build direct connection string
+            hosts_str = ",".join(shard_hosts)
+            credentials = f"{username}:{password}@" if username and password else ""
+            db_path = f"/{database}" if database else "/mydb"
+            
+            # Replica set name (check Atlas dashboard if this doesn't work)
+            replica_set = "atlas-y5ir6j-shard-0"
+            
+            uri = f"mongodb://{credentials}{hosts_str}{db_path}?replicaSet={replica_set}&ssl=true&authSource=admin"
+            print(f">>> Converted to direct connection with {len(shard_hosts)} hosts")
         
         extensions.client = MongoClient(
             uri,
