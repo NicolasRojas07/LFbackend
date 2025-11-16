@@ -17,13 +17,18 @@ def create_app(config_object=Config):
         # Fail fast with a clear message if MONGO_URI is missing
         raise RuntimeError("MONGO_URI is not set. Configure it via environment variables.")
 
-    # If using MongoDB Atlas SRV, disable OCSP endpoint check unless already set in the URI
+    # If using MongoDB Atlas SRV, disable OCSP endpoint check unless already set
+    # Skip adding if tlsAllowInvalidCertificates is present to avoid invalid combos
     uri = app.config.get("MONGO_URI", "")
     try:
         parsed = urlparse(uri)
         if parsed.scheme == "mongodb+srv" and parsed.hostname and parsed.hostname.endswith("mongodb.net"):
             qs = dict(parse_qsl(parsed.query, keep_blank_values=True))
-            if "tlsDisableOCSPEndpointCheck" not in qs:
+            keys_lower = {k.lower() for k in qs.keys()}
+            if (
+                "tlsdisableocspendpointcheck" not in keys_lower
+                and "tlsallowinvalidcertificates" not in keys_lower
+            ):
                 qs["tlsDisableOCSPEndpointCheck"] = "true"
                 new_query = urlencode(qs)
                 app.config["MONGO_URI"] = urlunparse((
