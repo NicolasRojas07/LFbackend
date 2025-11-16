@@ -69,9 +69,6 @@ def encode():
 
 @bp.route('/save-test', methods=['POST'])
 def save_test():
-    if not extensions.db:
-        return jsonify({"error": "MongoDB not available - feature disabled"}), 503
-    
     data = request.get_json() or {}
     name = data.get("name")
     token = data.get("token")
@@ -86,9 +83,6 @@ def save_test():
 
 @bp.route('/tests', methods=['GET'])
 def list_tests():
-    if not extensions.db:
-        return jsonify({"error": "MongoDB not available - feature disabled"}), 503
-    
     collection = extensions.db.test_cases
     cursor = collection.find().sort("created_at", -1)
     docs = []
@@ -99,9 +93,6 @@ def list_tests():
 
 @bp.route('/tests/<test_id>', methods=['DELETE'])
 def delete_test(test_id):
-    if not extensions.db:
-        return jsonify({"error": "MongoDB not available - feature disabled"}), 503
-    
     collection = extensions.db.test_cases
     try:
         res = collection.delete_one({"_id": ObjectId(test_id)})

@@ -20,32 +20,32 @@ def create_app(config_object=Config):
         # Fail fast with a clear message if MONGO_URI is missing
         raise RuntimeError("MONGO_URI is not set. Configure it via environment variables.")
 
-    # Initialize direct PyMongo client - MongoDB optional for basic JWT operations
+    # Initialize direct PyMongo client
     uri = app.config.get("MONGO_URI", "")
+    if not uri:
+        raise RuntimeError("MONGO_URI is not set. Configure it via environment variables.")
     
-    if uri:
-        try:
-            extensions.client = MongoClient(
-                uri,
-                serverSelectionTimeoutMS=5000,
-                connectTimeoutMS=5000,
-                socketTimeoutMS=5000
-            )
-            extensions.db = extensions.client.get_database()
-            
-            # Test connection
-            extensions.db.command('ping')
-            print("✓ MongoDB connection successful")
-        except Exception as e:
-            print(f"⚠ MongoDB connection FAILED: {type(e).__name__}: {str(e)[:100]}")
-            print("  → MongoDB endpoints (/api/jwt/tests, /save-test) will return 503")
-            print("  → Other JWT endpoints continue to work normally")
-            extensions.db = None
-            extensions.client = None
-    else:
-        print("⚠ MONGO_URI not set - MongoDB endpoints disabled")
-        extensions.db = None
-        extensions.client = None
+    try:
+        # If using mongodb+srv and getting TLS errors, try converting to direct connection
+        if uri.startswith("mongodb+srv://"):
+            print("⚠ Using mongodb+srv - may have TLS issues on some platforms")
+        
+        extensions.client = MongoClient(
+            uri,
+            serverSelectionTimeoutMS=10000,
+            connectTimeoutMS=10000,
+            socketTimeoutMS=10000
+        )
+        extensions.db = extensions.client.get_database()
+        
+        # Test connection
+        extensions.db.command('ping')
+        print("✓ MongoDB connection successful")
+    except Exception as e:
+        print(f"✗ MongoDB connection FAILED: {type(e).__name__}: {str(e)[:200]}")
+        print("  → For Python 3.13 + Render, try using mongodb:// (not mongodb+srv://)")
+        print("  → Or use Render's managed MongoDB instead of Atlas")
+        raise RuntimeError(f"MongoDB connection required but failed: {type(e).__name__}")
 
     app.register_blueprint(jwt_bp)
 
