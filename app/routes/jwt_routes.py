@@ -50,13 +50,22 @@ def encode():
     algorithm = data.get("algorithm", "HS256")
 
     if not secret:
-        return jsonify({"error": "Missing 'secret'"}), 400
+        secret = current_app.config.get("APP_SECRET")
+        if not secret:
+            return jsonify({"error": "No secret provided and APP_SECRET is not configured"}), 400
+
+    allowed = current_app.config.get("ALLOWED_ALGORITHMS", [])
+    if algorithm not in allowed:
+        return jsonify({
+            "error": f"Invalid algorithm '{algorithm}'. Allowed algorithms: {allowed}"
+        }), 400
 
     try:
         token = JWTService.create_token(header, payload, secret, algorithm)
         return jsonify({"token": token})
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Token generation failed: {str(e)}"}), 400
+
 
 @bp.route('/save-test', methods=['POST'])
 def save_test():
