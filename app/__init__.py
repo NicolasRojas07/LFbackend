@@ -43,6 +43,15 @@ def create_app(config_object=Config):
         pass
 
     mongo.init_app(app)
+    
+    # Test MongoDB connection on startup and log result
+    try:
+        mongo.db.command('ping')
+        print("✓ MongoDB connection successful")
+    except Exception as e:
+        print(f"✗ MongoDB connection FAILED: {type(e).__name__}: {e}")
+        print("  → Check Atlas Network Access IP allowlist")
+        print("  → Verify database user permissions")
 
     app.register_blueprint(jwt_bp)
 
