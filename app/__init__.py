@@ -2,9 +2,12 @@ from flask import Flask
 from flask_cors import CORS
 from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 import traceback
+import ssl
+from pymongo import MongoClient
+import certifi
 from app.config import Config
 from app.routes.jwt_routes import bp as jwt_bp
-from app.extensions import mongo
+from app import extensions
 
 def create_app(config_object=Config):
     app = Flask(__name__)
@@ -17,36 +20,21 @@ def create_app(config_object=Config):
         # Fail fast with a clear message if MONGO_URI is missing
         raise RuntimeError("MONGO_URI is not set. Configure it via environment variables.")
 
-    # If using MongoDB Atlas SRV, disable OCSP endpoint check unless already set
-    # Skip adding if tlsAllowInvalidCertificates is present to avoid invalid combos
+    # Initialize direct PyMongo client with ssl_cert_reqs=CERT_NONE to bypass TLS issues
     uri = app.config.get("MONGO_URI", "")
     try:
-        parsed = urlparse(uri)
-        if parsed.scheme == "mongodb+srv" and parsed.hostname and parsed.hostname.endswith("mongodb.net"):
-            qs = dict(parse_qsl(parsed.query, keep_blank_values=True))
-            keys_lower = {k.lower() for k in qs.keys()}
-            if (
-                "tlsdisableocspendpointcheck" not in keys_lower
-                and "tlsallowinvalidcertificates" not in keys_lower
-            ):
-                qs["tlsDisableOCSPEndpointCheck"] = "true"
-                new_query = urlencode(qs)
-                app.config["MONGO_URI"] = urlunparse((
-                    parsed.scheme,
-                    parsed.netloc,
-                    parsed.path,
-                    parsed.params,
-                    new_query,
-                    parsed.fragment,
-                ))
-    except Exception:
-        pass
-
-    mongo.init_app(app)
-    
-    # Test MongoDB connection on startup and log result
-    try:
-        mongo.db.command('ping')
+        extensions.client = MongoClient(
+            uri,
+            ssl_cert_reqs=ssl.CERT_NONE,
+            tlsCAFile=certifi.where(),
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=5000,
+            socketTimeoutMS=5000
+        )
+        extensions.db = extensions.client.get_database()
+        
+        # Test connection
+        extensions.db.command('ping')
         print("✓ MongoDB connection successful")
     except Exception as e:
         print(f"✗ MongoDB connection FAILED: {type(e).__name__}: {e}")

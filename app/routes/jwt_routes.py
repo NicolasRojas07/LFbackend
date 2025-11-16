@@ -4,7 +4,7 @@ from bson.errors import InvalidId
 
 from app.services.jwt_service import JWTService
 from app.model.test_case_model import TestCase
-from app.extensions import mongo
+from app import extensions
 
 bp = Blueprint('jwt', __name__, url_prefix='/api/jwt')
 
@@ -77,13 +77,13 @@ def save_test():
         return jsonify({"error": "Missing 'name' or 'token'"}), 400
 
     test_case = TestCase(name=name, description=data.get("description",""), token=token, result=result)
-    collection = mongo.db.test_cases
+    collection = extensions.db.test_cases
     inserted = collection.insert_one(test_case.to_dict())
     return jsonify({"inserted_id": str(inserted.inserted_id)}), 201
 
 @bp.route('/tests', methods=['GET'])
 def list_tests():
-    collection = mongo.db.test_cases
+    collection = extensions.db.test_cases
     cursor = collection.find().sort("created_at", -1)
     docs = []
     for d in cursor:
@@ -93,7 +93,7 @@ def list_tests():
 
 @bp.route('/tests/<test_id>', methods=['DELETE'])
 def delete_test(test_id):
-    collection = mongo.db.test_cases
+    collection = extensions.db.test_cases
     try:
         res = collection.delete_one({"_id": ObjectId(test_id)})
     except InvalidId:
