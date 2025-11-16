@@ -1,5 +1,4 @@
 import os
-import pymongo
 from pymongo import MongoClient
 import ssl
 
@@ -18,4 +17,5 @@ class Config:
         tlsAllowInvalidCertificates=True,
         tlsVersion=ssl.PROTOCOL_TLSv1_2
     )
-    db = client.get_database()  
+    
+    db = client.get_database()
