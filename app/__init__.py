@@ -20,12 +20,12 @@ def create_app(config_object=Config):
         # Fail fast with a clear message if MONGO_URI is missing
         raise RuntimeError("MONGO_URI is not set. Configure it via environment variables.")
 
-    # Initialize direct PyMongo client with ssl_cert_reqs=CERT_NONE to bypass TLS issues
+    # Initialize direct PyMongo client with tlsInsecure to bypass TLS certificate validation
     uri = app.config.get("MONGO_URI", "")
     try:
         extensions.client = MongoClient(
             uri,
-            ssl_cert_reqs=ssl.CERT_NONE,
+            tlsInsecure=True,
             tlsCAFile=certifi.where(),
             serverSelectionTimeoutMS=5000,
             connectTimeoutMS=5000,
