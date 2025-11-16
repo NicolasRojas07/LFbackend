@@ -1,12 +1,4 @@
-import ssl
-from pymongo import MongoClient
-from app.config import Config
+from flask_pymongo import PyMongo
 
-client = MongoClient(
-    Config.MONGO_URI,
-    tls=True,
-    tlsAllowInvalidCertificates=True, 
-    tlsVersion=ssl.PROTOCOL_TLSv1_2
-)
-
-db = client.get_database()
+# Flask-PyMongo instance; initialized in create_app via mongo.init_app(app)
+mongo = PyMongo()
