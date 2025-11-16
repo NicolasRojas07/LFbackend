@@ -3,7 +3,7 @@ from flask import Flask
 from flask_cors import CORS
 import traceback
 
-from config import Config
+from app.config import Config
 from extensions import mongo
 from routes.jwt_routes import bp as jwt_bp
 
