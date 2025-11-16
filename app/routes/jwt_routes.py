@@ -85,7 +85,3 @@ def delete_test(test_id):
     except InvalidId:
         return jsonify({"error": "Invalid test_id"}), 400
     return jsonify({"deleted_count": res.deleted_count})
-
-@app.route("/health")
-def health():
-    return {"status": "ok"}, 200
