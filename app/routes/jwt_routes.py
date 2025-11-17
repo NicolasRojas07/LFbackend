@@ -76,20 +76,26 @@ def save_test():
     if not name or not token:
         return jsonify({"error": "Missing 'name' or 'token'"}), 400
 
-    test_case = TestCase(name=name, description=data.get("description",""), token=token, result=result)
-    collection = extensions.db.test_cases
-    inserted = collection.insert_one(test_case.to_dict())
-    return jsonify({"inserted_id": str(inserted.inserted_id)}), 201
+    try:
+        test_case = TestCase(name=name, description=data.get("description",""), token=token, result=result)
+        collection = extensions.db.test_cases
+        inserted = collection.insert_one(test_case.to_dict())
+        return jsonify({"inserted_id": str(inserted.inserted_id), "success": True}), 201
+    except Exception as e:
+        return jsonify({"error": f"Failed to save test: {str(e)}"}), 500
 
 @bp.route('/tests', methods=['GET'])
 def list_tests():
-    collection = extensions.db.test_cases
-    cursor = collection.find().sort("created_at", -1)
-    docs = []
-    for d in cursor:
-        d["id"] = str(d.pop("_id"))
-        docs.append(d)
-    return jsonify(docs)
+    try:
+        collection = extensions.db.test_cases
+        cursor = collection.find().sort("created_at", -1)
+        docs = []
+        for d in cursor:
+            d["id"] = str(d.pop("_id"))
+            docs.append(d)
+        return jsonify({"tests": docs, "count": len(docs)}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch tests: {str(e)}", "tests": [], "count": 0}), 500
 
 @bp.route('/tests/<test_id>', methods=['DELETE'])
 def delete_test(test_id):
