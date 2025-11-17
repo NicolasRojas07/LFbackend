@@ -93,9 +93,10 @@ def list_tests():
         for d in cursor:
             d["id"] = str(d.pop("_id"))
             docs.append(d)
-        return jsonify({"tests": docs, "count": len(docs)}), 200
+        return jsonify(docs), 200
     except Exception as e:
-        return jsonify({"error": f"Failed to fetch tests: {str(e)}", "tests": [], "count": 0}), 500
+        print(f"Error fetching tests: {str(e)}")
+        return jsonify([]), 200
 
 @bp.route('/tests/<test_id>', methods=['DELETE'])
 def delete_test(test_id):
