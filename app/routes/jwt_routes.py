@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from bson import ObjectId
 from bson.errors import InvalidId
+from datetime import datetime, timedelta, timezone
 
 from app.services.jwt_service import JWTService
 from app.model.test_case_model import TestCase
@@ -51,6 +52,16 @@ def encode():
     payload = data.get("payload", {})
     secret = data.get("secret")
     algorithm = data.get("algorithm", "HS256")
+    
+    # Add expiration time if requested
+    exp_minutes = data.get("exp_minutes")
+    if exp_minutes is not None:
+        exp_time = datetime.now(timezone.utc) + timedelta(minutes=exp_minutes)
+        payload["exp"] = int(exp_time.timestamp())
+    
+    # Add issued-at time if not provided
+    if "iat" not in payload:
+        payload["iat"] = int(datetime.now(timezone.utc).timestamp())
 
     if not secret:
         secret = current_app.config.get("APP_SECRET")
