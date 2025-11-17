@@ -114,8 +114,8 @@ def delete_test(test_id):
 @bp.route('/analyze', methods=['POST'])
 def analyze_jwt():
     """
-    Endpoint completo de análisis de JWT
-    Ejecuta las 3 fases: Léxico, Sintáctico y Semántico
+    Complete JWT analysis endpoint
+    Executes all 3 phases: Lexical, Syntactic and Semantic
     """
     data = request.get_json() or {}
     token = data.get("token")
@@ -129,30 +129,30 @@ def analyze_jwt():
     }
     
     try:
-        # FASE 1: Análisis Léxico
+        # PHASE 1: Lexical Analysis
         lexer = JWTLexer(token)
         lexical_analysis = lexer.analyze()
         result["phases"]["lexical"] = lexical_analysis
         
-        # Si el análisis léxico falla, no continuar
+        # If lexical analysis fails, don't continue
         if not lexical_analysis["success"]:
             result["overall_success"] = False
-            result["message"] = "Análisis léxico falló"
+            result["message"] = "Lexical analysis failed"
             return jsonify(result), 200
         
-        # FASE 2: Análisis Sintáctico
+        # PHASE 2: Syntactic Analysis
         parser = JWTParser(lexer.tokens)
         syntactic_analysis = parser.analyze()
         result["phases"]["syntactic"] = syntactic_analysis
         
-        # Si el análisis sintáctico falla, no continuar
+        # If syntactic analysis fails, don't continue
         if not syntactic_analysis["success"]:
             result["overall_success"] = False
-            result["message"] = "Análisis sintáctico falló"
+            result["message"] = "Syntactic analysis failed"
             return jsonify(result), 200
         
-        # FASE 3: Análisis Semántico
-        # Decodificar header y payload para análisis semántico
+        # PHASE 3: Semantic Analysis
+        # Decode header and payload for semantic analysis
         decoded = JWTService.decode_token_no_verify(token)
         header = decoded["header"]
         payload = decoded["payload"]
@@ -161,14 +161,14 @@ def analyze_jwt():
         semantic_analysis = semantic_analyzer.analyze()
         result["phases"]["semantic"] = semantic_analysis
         
-        # Agregar información decodificada
+        # Add decoded information
         result["decoded"] = {
             "header": header,
             "payload": payload,
             "signature": decoded["signature_b64url"]
         }
         
-        # Resultado general
+        # Overall result
         result["overall_success"] = (
             lexical_analysis["success"] and 
             syntactic_analysis["success"] and 
@@ -176,14 +176,14 @@ def analyze_jwt():
         )
         
         if result["overall_success"]:
-            result["message"] = "Token JWT válido en todas las fases de análisis"
+            result["message"] = "Valid JWT token in all analysis phases"
         else:
-            result["message"] = "Token JWT tiene errores semánticos"
+            result["message"] = "JWT token has semantic errors"
         
         return jsonify(result), 200
         
     except Exception as e:
         return jsonify({
-            "error": f"Error durante el análisis: {str(e)}",
+            "error": f"Error during analysis: {str(e)}",
             "token": token
         }), 500

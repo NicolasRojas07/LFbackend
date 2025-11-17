@@ -1,15 +1,15 @@
 """
-Analizador Sintáctico para JWT
-Fase 2: Análisis Sintáctico
+JWT Syntactic Analyzer
+Phase 2: Syntactic Analysis
 
-Gramática Libre de Contexto:
+Context-Free Grammar:
 G = (V, Σ, P, S)
 
 V (Variables): {JWT, HEADER, PAYLOAD, SIGNATURE, BASE64URL_STRING}
-Σ (Terminales): {[A-Za-z0-9_-], .}
-S (Símbolo inicial): JWT
+Σ (Terminals): {[A-Za-z0-9_-], .}
+S (Start symbol): JWT
 
-Producciones (P):
+Productions (P):
 1. JWT → HEADER . PAYLOAD . SIGNATURE
 2. HEADER → BASE64URL_STRING
 3. PAYLOAD → BASE64URL_STRING
@@ -21,10 +21,10 @@ from app.analyzers.lexer import JWTLexer, TokenType, Token
 
 
 class ParseNode:
-    """Nodo del árbol de derivación"""
+    """Parse tree node"""
     def __init__(self, symbol: str, value: str = "", children: List['ParseNode'] = None):
-        self.symbol = symbol  # No terminal o terminal
-        self.value = value    # Valor del token (para terminales)
+        self.symbol = symbol  # Non-terminal or terminal
+        self.value = value    # Token value (for terminals)
         self.children = children or []
     
     def to_dict(self):
@@ -38,10 +38,10 @@ class ParseNode:
 
 class JWTParser:
     """
-    Analizador Sintáctico Descendente Recursivo para JWT
+    Recursive Descent Syntactic Analyzer for JWT
     
-    Implementa un parser LL(1) que valida la estructura sintáctica del JWT
-    según la gramática libre de contexto definida.
+    Implements an LL(1) parser that validates JWT syntactic structure
+    according to the defined context-free grammar.
     """
     
     def __init__(self, tokens: List[Token]):
@@ -52,28 +52,28 @@ class JWTParser:
     
     def parse(self) -> Tuple[ParseNode, List[str], bool]:
         """
-        Realiza el análisis sintáctico completo
+        Performs complete syntactic analysis
         
         Returns:
-            Tuple[ParseNode, List[str], bool]: Árbol de derivación, errores, éxito
+            Tuple[ParseNode, List[str], bool]: Parse tree, errors, success
         """
         self.parse_tree = self._parse_jwt()
         success = len(self.errors) == 0 and self.parse_tree is not None
         return self.parse_tree, self.errors, success
     
     def _current_token(self) -> Token:
-        """Retorna el token actual"""
+        """Returns current token"""
         if self.current < len(self.tokens):
             return self.tokens[self.current]
         return Token(TokenType.EOF, '', -1)
     
     def _consume(self, expected_type: TokenType) -> Token:
-        """Consume un token del tipo esperado"""
+        """Consumes a token of expected type"""
         token = self._current_token()
         if token.type != expected_type:
             self.errors.append(
-                f"Error sintáctico en posición {token.position}: "
-                f"se esperaba {expected_type.value}, se encontró {token.type.value}"
+                f"Syntax error at position {token.position}: "
+                f"expected {expected_type.value}, found {token.type.value}"
             )
             return None
         self.current += 1
@@ -81,8 +81,8 @@ class JWTParser:
     
     def _parse_jwt(self) -> ParseNode:
         """
-        Producción 1: JWT → HEADER . PAYLOAD . SIGNATURE
-        Símbolo inicial de la gramática
+        Production 1: JWT → HEADER . PAYLOAD . SIGNATURE
+        Start symbol of grammar
         """
         jwt_node = ParseNode("JWT", "")
         
@@ -92,10 +92,10 @@ class JWTParser:
             return None
         jwt_node.children.append(header_node)
         
-        # Primer DOT
+        # First DOT
         dot1 = self._consume(TokenType.DOT)
         if dot1 is None:
-            self.errors.append("Falta el primer separador '.' después del HEADER")
+            self.errors.append("Missing first separator '.' after HEADER")
             return None
         jwt_node.children.append(ParseNode("DOT", "."))
         
@@ -105,10 +105,10 @@ class JWTParser:
             return None
         jwt_node.children.append(payload_node)
         
-        # Segundo DOT
+        # Second DOT
         dot2 = self._consume(TokenType.DOT)
         if dot2 is None:
-            self.errors.append("Falta el segundo separador '.' después del PAYLOAD")
+            self.errors.append("Missing second separator '.' after PAYLOAD")
             return None
         jwt_node.children.append(ParseNode("DOT", "."))
         
@@ -118,26 +118,26 @@ class JWTParser:
             return None
         jwt_node.children.append(signature_node)
         
-        # Verificar EOF
+        # Verify EOF
         eof = self._consume(TokenType.EOF)
         if eof is None:
-            self.errors.append("Se encontraron caracteres adicionales después del JWT válido")
+            self.errors.append("Found additional characters after valid JWT")
             return None
         
         return jwt_node
     
     def _parse_header(self) -> ParseNode:
         """
-        Producción 2: HEADER → BASE64URL_STRING
+        Production 2: HEADER → BASE64URL_STRING
         """
         token = self._current_token()
         if token.type == TokenType.INVALID:
-            self.errors.append(f"HEADER inválido en posición {token.position}: contiene caracteres no Base64URL")
+            self.errors.append(f"Invalid HEADER at position {token.position}: contains non-Base64URL characters")
             self.current += 1
             return None
         
         if token.type != TokenType.HEADER:
-            self.errors.append(f"Se esperaba HEADER, se encontró {token.type.value}")
+            self.errors.append(f"Expected HEADER, found {token.type.value}")
             return None
         
         self.current += 1
@@ -148,16 +148,16 @@ class JWTParser:
     
     def _parse_payload(self) -> ParseNode:
         """
-        Producción 3: PAYLOAD → BASE64URL_STRING
+        Production 3: PAYLOAD → BASE64URL_STRING
         """
         token = self._current_token()
         if token.type == TokenType.INVALID:
-            self.errors.append(f"PAYLOAD inválido en posición {token.position}: contiene caracteres no Base64URL")
+            self.errors.append(f"Invalid PAYLOAD at position {token.position}: contains non-Base64URL characters")
             self.current += 1
             return None
         
         if token.type != TokenType.PAYLOAD:
-            self.errors.append(f"Se esperaba PAYLOAD, se encontró {token.type.value}")
+            self.errors.append(f"Expected PAYLOAD, found {token.type.value}")
             return None
         
         self.current += 1
@@ -168,16 +168,16 @@ class JWTParser:
     
     def _parse_signature(self) -> ParseNode:
         """
-        Producción 4: SIGNATURE → BASE64URL_STRING
+        Production 4: SIGNATURE → BASE64URL_STRING
         """
         token = self._current_token()
         if token.type == TokenType.INVALID:
-            self.errors.append(f"SIGNATURE inválida en posición {token.position}: contiene caracteres no Base64URL")
+            self.errors.append(f"Invalid SIGNATURE at position {token.position}: contains non-Base64URL characters")
             self.current += 1
             return None
         
         if token.type != TokenType.SIGNATURE:
-            self.errors.append(f"Se esperaba SIGNATURE, se encontró {token.type.value}")
+            self.errors.append(f"Expected SIGNATURE, found {token.type.value}")
             return None
         
         self.current += 1
@@ -187,10 +187,10 @@ class JWTParser:
         return signature_node
     
     def get_grammar_info(self) -> Dict:
-        """Retorna información sobre la gramática"""
+        """Returns grammar information"""
         return {
-            "type": "Gramática Libre de Contexto (CFG)",
-            "parser_type": "Descendente Recursivo LL(1)",
+            "type": "Context-Free Grammar (CFG)",
+            "parser_type": "Recursive Descent LL(1)",
             "start_symbol": "JWT",
             "non_terminals": ["JWT", "HEADER", "PAYLOAD", "SIGNATURE", "BASE64URL_STRING"],
             "terminals": ["[A-Za-z0-9_-]", "."],
@@ -205,12 +205,12 @@ class JWTParser:
     
     def analyze(self) -> Dict:
         """
-        Realiza análisis sintáctico completo y retorna resultado estructurado
+        Performs complete syntactic analysis and returns structured result
         """
         parse_tree, errors, success = self.parse()
         
         return {
-            "phase": "Análisis Sintáctico",
+            "phase": "Syntactic Analysis",
             "success": success,
             "grammar": self.get_grammar_info(),
             "parse_tree": parse_tree.to_dict() if parse_tree else None,
